@@ -180,8 +180,7 @@ def aws_lambda(fn):
             return lambda_response(response)
         if isinstance(response, dict):
             return lambda_response(
-                json.dumps(
-                    response, default=str),
+                json.dumps(response, default=json_serialize),
                 content_type="application/json")
         if callable(response):
             return response(req)
