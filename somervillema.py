@@ -240,6 +240,7 @@ def find_cases(doc):
             addresses = get_address_list(proposal["number"], proposal["street"])
             proposal["address"] = addresses[0]
             proposal["all_addresses"] = addresses
+            proposal["source"] = URL_BASE
 
             # Event:
             events = []
