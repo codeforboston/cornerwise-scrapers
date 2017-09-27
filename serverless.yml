@@ -1,0 +1,22 @@
+service: cornerwise-scrapers
+
+provider:
+  name: aws
+  runtime: python3.6
+  timeout: 60
+  profile: cornerwise
+
+functions:
+  somervillema:
+    handler: somervillema.scrape
+    events:
+      - http:
+          path: somervillema
+          method: get
+  
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true

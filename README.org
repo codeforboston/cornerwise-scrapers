@@ -1,0 +1,22 @@
+* Cornerwise Scrapers
+** Introduction
+   Reimplementation of Cornerwise scrapers using AWS lambda infrastructure.
+
+** Setup 
+   - ~npm install serverless~
+     Installs [[https://serverless.com][Serverless]], a command line utility that simplifies the deployment
+     of services that run on AWS Lambda, Azure Functions, or others.
+
+   - ~npm install --save serverless-python-requirements~
+     Installs a Serverless plugin that will download the PIP requirements
+     specified in ~requirements.txt~ before deploying to AWS. (Note: you need
+     Docker installed for this to run correctly.)
+
+** Deploying
+   To deploy to AWS, you'll need to set up an AWS account, if you haven't
+   already. You should also configure a ~cornerwise~ profile. See [[https://serverless.com/framework/docs/providers/aws/guide/credentials/][here]] for
+   details about setting up a profile and the privileges the AWS user requires.
+
+   If everything is correctly configured, you should be able to ~cd~ to this
+   directory and type ~serverless deploy -v~ to fully deploy the lambda function
+   and corresponding API Gateway interface to AWS.
