@@ -83,7 +83,7 @@ def optional(fn, default=None):
     def helper(td):
         try:
             val = fn(td)
-            return default if value is None else val
+            return default if val is None else val
         except:
             return default
 
