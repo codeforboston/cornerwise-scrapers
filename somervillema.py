@@ -34,7 +34,7 @@ def to_under(s):
 
 def link_info(a, base=URL_BASE):
     return {"title": a.get_text().strip(),
-            "url": urljoin(base, a["href"])}
+            "url": urljoin(base, a["href"]).replace(" ", "%20")}
 
 
 def get_date(d):
