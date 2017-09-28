@@ -115,7 +115,7 @@ def find_table(doc):
 def get_data(doc, get_attribute=to_under, processors={}):
     table = find_table(doc)
     titles = col_names(table)
-    attributes = [get_attribute(t) for t in titles]
+    attributes = [attribute_for_title(t) for t in titles]
 
     trs = table.find("tbody").find_all("tr")
     for i, tr in enumerate(trs):
@@ -225,20 +225,11 @@ def find_cases(doc):
     """Takes a BeautifulSoup document, returns a list of maps representing the
     proposals found in the document.
     """
-    table = find_table(doc)
-    attributes = [attribute_for_title(t) for t in col_names(table)]
-
-    tbody = table.find("tbody")
-    trs = tbody.find_all("tr")
-
     cases = []
 
-    for i, tr in enumerate(trs):
+    for i, proposal in enumerate(get_data(doc, processors=field_processors)):
         try:
-            proposal = get_row_vals(attributes, tr,
-                                    processors=field_processors)
             addresses = get_address_list(proposal["number"], proposal["street"])
-            proposal["address"] = addresses[0]
             proposal["all_addresses"] = addresses
             proposal["source"] = URL_BASE
 
@@ -260,6 +251,7 @@ def find_cases(doc):
             # Note that we don't have insight into whether the proposal was
             # approved!
             proposal["complete"] = bool(proposal["decisions"])
+            proposal["events"] = events
             cases.append(proposal)
         except Exception as err:
             tr_string = " | ".join(tr.stripped_strings)
