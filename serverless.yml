@@ -13,10 +13,16 @@ functions:
       - http:
           path: somervillema
           method: get
+
+  greenline:
+    handler: greenline.handler
+    events:
+      - http:
+          path: greenline
+          method: get
   
 plugins:
   - serverless-python-requirements
-
 custom:
   pythonRequirements:
     dockerizePip: true
