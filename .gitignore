@@ -1,3 +1,6 @@
 /.requirements/*
 *.DS_Store
 __pycache__/*
+flycheck_*
+/.serverless
+/node_modules
