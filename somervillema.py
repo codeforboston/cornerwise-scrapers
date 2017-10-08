@@ -11,6 +11,7 @@ from itertools import takewhile
 import pytz
 
 from cloud import aws_lambda
+from shared import preprocess
 
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
@@ -344,16 +345,6 @@ def get_proposals_since(dt=None,
 
 
 @aws_lambda
-def scrape(req):
-    since = req.GET.get("since")
-    since_stamp = req.GET.get("since_stamp")
-    if since:
-        since = datetime.strptime(since, "%Y%m%d")
-    elif since_stamp:
-        since = datetime.fromtimestamp(since_stamp)
-    else:
-        now = pytz.utc.localize(datetime.utcnow()).astimezone(TIMEZONE)
-        since = now - timedelta(days=30)
-
-    cases = get_proposals_since(since)
-    return {"cases": cases}
+@preprocess(TIMEZONE)
+def scrape(since):
+    return {"cases": get_proposals_since(since)}
