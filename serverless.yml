@@ -5,6 +5,9 @@ provider:
   runtime: python3.6
   timeout: 60
   profile: cornerwise
+  environment:
+    SOCRATA_TOKEN: ${file(./credentials.json):socrata_app_token}
+    SOCRATA_SECRET: ${file(./credentials.json):socrata_app_secret}
 
 functions:
   somervillema:
@@ -12,6 +15,13 @@ functions:
     events:
       - http:
           path: somervillema
+          method: get
+
+  cambridgema:
+    handler: cambridgema.scrape
+    events:
+      - http:
+          path: cambridgema
           method: get
 
   greenline:
