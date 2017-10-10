@@ -1,21 +1,14 @@
 from datetime import datetime, timedelta
-import json
 import os
 import re
-from urllib import parse
-from urllib.request import Request, urlopen
 
 import pytz
 from dateutil.parser import parse as date_parse
 
 from cloud import aws_lambda
 from shared import preprocess
+import socrata
 
-
-accepts = {
-    "json": "application/json",
-    "xml": "application/xml"
-}
 
 copy_keys = {
     "case_number": "plan_number",
@@ -38,28 +31,6 @@ def under_to_title(s):
 
 def no_data(s):
     return re.match(r"(n/?a|no change|same)", s, re.I)
-
-
-def make_request(domain, resource_id, token, fmt="json",
-                 soql=None):
-    if soql:
-        qs = "?" + parse.urlencode({"$query": soql})
-    else:
-        qs = ""
-    url = "https://{domain}/resource/{resource_id}.{fmt}{qs}"\
-          .format(domain=domain,
-                  resource_id=resource_id,
-                  fmt=fmt,
-                  qs=qs)
-    data = None
-
-    return Request(url, data, {"Accept": accepts[fmt],
-                               "X-App-Token": token})
-
-
-def get_json(req):
-    with urlopen(req) as f:
-        return json.loads(f.read().decode("utf-8"))
 
 
 def match_complete(s):
@@ -108,8 +79,8 @@ def get_proposals_since(since):
     soql = ("SELECT * WHERE applicationdate >= "
             "'{dt}' OR decisiondate >= '{dt}'")\
             .format(dt=since.isoformat())
-    response = get_json(make_request("data.cambridgema.gov",
-                                     "urfm-usws", SOCRATA_TOKEN, soql=soql))
+    response = socrata.json_request("data.cambridgema.gov",
+                                    "urfm-usws", SOCRATA_TOKEN, soql=soql)
     return [process_json(c) for c in response]
 
 
