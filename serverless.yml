@@ -17,6 +17,13 @@ functions:
           path: somervillema
           method: get
 
+  somervillema_projects:
+    handler: somervillema_projects.scrape
+    events:
+      - http:
+          path: somervillema_projects
+          method: get
+
   cambridgema:
     handler: cambridgema.scrape
     events:
