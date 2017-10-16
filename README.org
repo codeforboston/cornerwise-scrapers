@@ -1,8 +1,10 @@
 * Cornerwise Scrapers
 ** Introduction
-   Reimplementation of Cornerwise scrapers using AWS lambda infrastructure.
+   Implementation of the "standard" [[https://github.com/codeforboston/cornerwise][Cornerwise]] scrapers using [[https://aws.amazon.com/lambda/][AWS Lambda]]
+   infrastructure.
 
 ** Setup 
+   - Install ~Node.js~, preferably using [[https://github.com/creationix/nvm#installation][NVM]].
    - ~npm install serverless~
      Installs [[https://serverless.com][Serverless]], a command line utility that simplifies the deployment
      of services that run on AWS Lambda, Azure Functions, or others.
@@ -13,10 +15,45 @@
      Docker installed for this to run correctly.)
 
 ** Deploying
-   To deploy to AWS, you'll need to set up an AWS account, if you haven't
-   already. You should also configure a ~cornerwise~ profile. See [[https://serverless.com/framework/docs/providers/aws/guide/credentials/][here]] for
-   details about setting up a profile and the privileges the AWS user requires.
+   - To deploy to AWS, you'll need to set up an AWS account, if you haven't
+     already. You should also configure a ~cornerwise~ profile in your AWS
+     credentials. See [[https://serverless.com/framework/docs/providers/aws/guide/credentials/][here]] for details about setting up a profile and the
+     privileges the AWS user requires
+   - Copy ~credentials.example.json~ to ~credentials.json~ and modify the
+     variables to use your Socrata credentials.
+   - If everything is correctly configured, you should be able to ~cd~ to this
+     directory and type ~serverless deploy -v~ to fully deploy the lambda
+     function and corresponding API Gateway interface to AWS.
 
-   If everything is correctly configured, you should be able to ~cd~ to this
-   directory and type ~serverless deploy -v~ to fully deploy the lambda function
-   and corresponding API Gateway interface to AWS.
+* Scrapers
+** Somerville, MA Reports and Decisions
+   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/somervillema
+   - Types :: Cases
+   - Source :: [[./somervillema.py][somervillema.py]]
+   - Description :: Scrapes the OSPCD's [[https://www.somervillema.gov/departments/ospcd/planning-and-zoning/reports-and-decisions][Reports and Decisions]] page.
+
+** Cambridge, MA
+   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/cambridgema
+   - Types :: Cases
+   - Source :: [[./cambridgema.py][cambridgema.py]]
+
+** Somerville, MA Capital Projects
+   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/somerville_projects
+   - Source :: [[./somervillema_projects.py][somervillema_projects.py]]
+   - Types :: Projects
+   - Description :: Published annually by the Somerville Capital Projects
+                    Committee, the dataset [[https://data.somervillema.gov/Finance/Capital-Investment-Plan-Projects-FY16-26/wz6k-gm5k][includes]] "infrastructure projects,
+                    building improvements, park redesigns, and equipment
+                    purchases."
+
+** Green Line Extension
+   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/greenline
+   - Types :: Events
+   - Description :: Scrapes the "Upcoming Meetings" section of the
+                    [[http://greenlineextension.org/][Green Line Extension]] home page.
+
+* Using the Scrapers
+  The interface to the scrapers is intentionally simple. Place a GET request to
+  the scraper's URL. You may optionally supply a ~since~ query parameter
+  formatted as ~yyyymmdd~. The scraper will respond with JSON conforming to the
+  [[http://lbovet.github.io/docson/index.html#https://raw.githubusercontent.com/codeforboston/cornerwise/config/docs/scraper-schema.json][Cornerwise scraper schema]].
