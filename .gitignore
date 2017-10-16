@@ -4,3 +4,4 @@ __pycache__/*
 flycheck_*
 /.serverless
 /node_modules
+/credentials.json
