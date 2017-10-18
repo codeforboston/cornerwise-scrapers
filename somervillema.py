@@ -236,7 +236,7 @@ def find_cases(doc):
 
             # Event:
             events = []
-            event_title = event_title_for_case_number(proposal["case_number"]),
+            event_title = event_title_for_case_number(proposal["case_number"])
             event_description = DEFAULT_EVENT_DESCRIPTIONS.get(event_title)
             first_hearing = proposal.get("first_hearing_date")
             if first_hearing and event_title:
