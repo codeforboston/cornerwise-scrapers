@@ -62,9 +62,15 @@ def match_time_range(text):
 def process_event(elt):
     lines = [d.strip() for d in elt.descendants
              if isinstance(d, NavigableString) and d.strip()]
-    date = parse(lines[1])
+    for i, line in enumerate(lines):
+        try:
+            date = parse(lines[i])
+            break
+        except ValueError:
+            continue
 
-    start_time, end_time = match_time_range(lines[2])
+    date_line = i
+    start_time, end_time = match_time_range(lines[date_line+1])
 
     start_datetime = TIMEZONE.localize(datetime.combine(date, start_time))
     try:
@@ -79,12 +85,12 @@ def process_event(elt):
 
     return {
         "title": lines[0],
-        "description": "",
+        "description": " ".join(lines[1:date_line]),
         "start": start_datetime.isoformat(),
         "duration": f"{hours}:{minutes:0>2}",
         "region_name": "Somerville, MA",
         "address": {
-            "name": ", ".join(map(str.strip, lines[3:-2])),
+            "name": ", ".join(map(str.strip, lines[date_line+2:-2])),
             "street_address": lines[-2],
             "city": locale_match.group(1).strip(),
             "state": locale_match.group(2)
@@ -92,11 +98,14 @@ def process_event(elt):
     }
 
 
-def scrape_events(doc=None):
-    head = find_text_elem(doc or get_doc(),
-                          re.compile(r"^upcoming meetings$", re.I),
+def find_meetings(doc):
+    head = find_text_elem(doc, re.compile(r"^upcoming meetings$", re.I),
                           {"strong"})
-    tr = head.find_parent("tr")
+    return head.find_parent("tr")
+
+
+def scrape_events(doc=None):
+    tr = find_meetings(doc or get_doc())
     schedule_row = tr.find_next_sibling("tr")
     event_elements = schedule_row.find_all("p")
 
