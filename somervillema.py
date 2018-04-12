@@ -1,19 +1,16 @@
-from os import path
-import sys
-
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 import re
 import pytz
 from functools import partial
 from bs4 import BeautifulSoup
 from itertools import takewhile
-import pytz
+
+import requests
 
 from cloud import aws_lambda
 from shared import preprocess
 
-from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 
@@ -27,6 +24,7 @@ URL_FORMAT = URL_BASE + "?page={:1}"
 
 HEARING_HOUR = 18
 HEARING_MIN = 0
+
 
 def to_under(s):
     "Converts a whitespace-separated string to underscore-separated."
@@ -120,7 +118,7 @@ def get_data(doc, get_attribute=to_under, processors={}):
 
     trs = table.find("tbody").find_all("tr")
     for i, tr in enumerate(trs):
-        yield get_row_vals(attributes, tr, processors)
+        yield i, tr, get_row_vals(attributes, tr, processors)
 
 
 def event_title_for_case_number(case_number):
@@ -155,12 +153,9 @@ def attribute_for_title(title):
 # TODO: Return None or error if the response is not successful
 def get_page(page=1, url_format=URL_FORMAT):
     "Returns the HTML content of the given Reports and Decisions page."
-    url = url_format.format(page)
-    f = urlopen(url)
-    logger.info("Fetching page %i", page)
-    html = f.read()
-    f.close()
-    return html
+    response = requests.get(url_format.format(page))
+    if response.status_code == 200:
+        return response.content
 
 
 def detect_last_page(doc):
@@ -180,16 +175,12 @@ def get_links(elt, base=URL_BASE):
     return [link_info(a, base) for a in elt.find_all("a") if a["href"]]
 
 
-def staff_report_field(td, base=URL_BASE):
-    links = sum((a.find_all("a") for a in td.find_all("a")), [])
-    return links and {"links": [link_info(a, base) for a in links]}
-
-
 def default_field(td):
     return td.get_text().strip()
 
+
 field_processors = {
-    "reports": staff_report_field,
+    "reports": links_field,
     "decisions": links_field,
     "other": links_field,
     "first_hearing_date": optional(dates_field),
@@ -228,7 +219,7 @@ def find_cases(doc):
     """
     cases = []
 
-    for i, proposal in enumerate(get_data(doc, processors=field_processors)):
+    for i, tr, proposal in get_data(doc, processors=field_processors):
         try:
             addresses = get_address_list(proposal["number"], proposal["street"])
             proposal["all_addresses"] = addresses
@@ -240,11 +231,12 @@ def find_cases(doc):
             event_description = DEFAULT_EVENT_DESCRIPTIONS.get(event_title)
             first_hearing = proposal.get("first_hearing_date")
             if first_hearing and event_title:
-                first_hearing = first_hearing.replace(hour=HEARING_HOUR, minute=HEARING_MIN)
+                first_hearing = first_hearing.replace(hour=HEARING_HOUR,
+                                                      minute=HEARING_MIN)
                 events.append(
                     {"title": event_title,
                      "description": event_description,
-                     "date": first_hearing,
+                     "start": first_hearing,
                      "region_name": "Somerville, MA"})
 
             # For now, we assume that if there are one or more documents
@@ -252,12 +244,22 @@ def find_cases(doc):
             # Note that we don't have insight into whether the proposal was
             # approved!
             proposal["complete"] = bool(proposal["decisions"])
+            proposal["documents"] = []
+            for k in ["reports", "decisions", "other"]:
+                if proposal[k]:
+                    for link in proposal[k].get("links", []):
+                        link["tags"] = [k]
+                        proposal["documents"].append(link)
+                del proposal[k]
+
             proposal["events"] = events
+            del proposal["number"]
+            del proposal["street"]
+
             cases.append(proposal)
         except Exception as err:
             tr_string = " | ".join(tr.stripped_strings)
-            logger.error("Failed to scrape row %i: %s", i, tr_string)
-            logger.error(err)
+            logger.exception("Failed to scrape row %i: %s", i, tr_string)
             continue
     return cases
 
@@ -305,14 +307,14 @@ def get_pages():
             break
 
 
+def process_case_dict(case):
+    return case
+
+
 def get_cases(gen=None):
     "Returns a generator that produces cases."
-    if not gen:
-        gen = get_pages()
-
-    for doc in gen:
-        for case in find_cases(doc):
-            yield case
+    for doc in (gen or get_pages()):
+        yield from map(process_case_dict, find_cases(doc))
 
 
 def get_proposals_since(dt=None,
@@ -335,9 +337,10 @@ def get_proposals_since(dt=None,
     if not dt.tzinfo:
         dt = TIMEZONE.localize(dt)
 
-    def guard(case):
-        return (not dt or case[date_column] > dt) and \
-            (not stop_at_case or case["case_number"] != stop_at_case)
+    if dt:
+        guard = lambda case: case[date_column] > dt
+    elif stop_at_case:
+        guard = lambda case: case["case_number"] != stop_at_case
 
     all_cases = list(takewhile(guard, get_cases()))
 
