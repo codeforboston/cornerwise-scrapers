@@ -27,18 +27,18 @@
 
 * Scrapers
 ** Somerville, MA Reports and Decisions
-   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/somervillema
+   - URL :: https://scraper.cornerwise.org/somervillema
    - Types :: Cases
    - Source :: [[./somervillema.py][somervillema.py]]
    - Description :: Scrapes the OSPCD's [[https://www.somervillema.gov/departments/ospcd/planning-and-zoning/reports-and-decisions][Reports and Decisions]] page.
 
 ** Cambridge, MA
-   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/cambridgema
+   - URL :: https://scraper.cornerwise.org/cambridgema
    - Types :: Cases
    - Source :: [[./cambridgema.py][cambridgema.py]]
 
 ** Somerville, MA Capital Projects
-   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/somerville_projects
+   - URL :: https://scraper.cornerwise.org/somerville_projects
    - Source :: [[./somervillema_projects.py][somervillema_projects.py]]
    - Types :: Projects
    - Description :: Published annually by the Somerville Capital Projects
@@ -47,7 +47,7 @@
                     purchases."
 
 ** Green Line Extension
-   - URL :: https://58kr1azj04.execute-api.us-east-1.amazonaws.com/prod/greenline
+   - URL :: https://scraper.cornerwise.org/greenline
    - Types :: Events
    - Description :: Scrapes the "Upcoming Meetings" section of the
                     [[http://greenlineextension.org/][Green Line Extension]] home page.
