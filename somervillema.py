@@ -22,10 +22,6 @@ URL_BASE = (f"{URL_HOST}/departments/ospcd/"
             "planning-and-zoning/reports-and-decisions/robots")
 URL_FORMAT = URL_BASE + "?page={:1}"
 
-HEARING_HOUR = 18
-HEARING_MIN = 0
-
-
 def to_under(s):
     "Converts a whitespace-separated string to underscore-separated."
     return re.sub(r"\s+", "_", s.lower())
@@ -36,16 +32,15 @@ def link_info(a, base=URL_BASE):
             "url": urljoin(base, a["href"]).replace(" ", "%20")}
 
 
-def get_date(d):
-    return datetime.strptime(d, "%b %d, %Y")
-
-
-def get_datetime(datestring, tzinfo=None):
-    dt = datetime.strptime(datestring, "%m/%d/%Y - %I:%M%p")
+def get_datetime(datestring, tzinfo=None, pattern="%m/%d/%Y - %I:%M%p"):
+    dt = datetime.strptime(datestring, pattern)
     if tzinfo:
         return tzinfo.localize(dt)
 
     return dt
+
+
+get_date = partial(get_datetime, pattern="%b %d, %Y")
 
 
 def get_links(elt):
@@ -54,18 +49,18 @@ def get_links(elt):
 
 
 # Field processors:
-def dates_field(td):
-    return get_date(default_field(td))
+def dates_field(td, tzinfo=None):
+    return get_date(default_field(td), tzinfo)
 
 
 def datetime_field(td, tzinfo=None):
     return get_datetime(default_field(td), tzinfo)
 
 
-def datetime_field_tz(tz):
+def with_tz(fn, tz):
     if isinstance(tz, str):
         tz = pytz.timezone(tz)
-    return partial(datetime_field, tzinfo=tz)
+    return partial(fn, tzinfo=tz)
 
 
 def links_field(td):
@@ -83,7 +78,8 @@ def optional(fn, default=None):
         try:
             val = fn(td)
             return default if val is None else val
-        except:
+        except Exception as err:
+            logger.exception(f"Optional field failed with Exception:")
             return default
 
     return helper
@@ -119,6 +115,13 @@ def get_data(doc, get_attribute=to_under, processors={}):
     trs = table.find("tbody").find_all("tr")
     for i, tr in enumerate(trs):
         yield i, tr, get_row_vals(attributes, tr, processors)
+
+
+# This is just hardcoded based on known information about the Somerville PB/ZBA
+# schedule. Once the city events page is fixed and can be filtered by
+# department, this can go away.
+HEARING_HOUR = 18
+HEARING_MIN = 0
 
 
 def event_title_for_case_number(case_number):
@@ -183,8 +186,8 @@ field_processors = {
     "reports": links_field,
     "decisions": links_field,
     "other": links_field,
-    "first_hearing_date": optional(dates_field),
-    "updated_date": datetime_field_tz(TIMEZONE)
+    "first_hearing_date": optional(with_tz(dates_field, TIMEZONE)),
+    "updated_date": with_tz(datetime_field, TIMEZONE)
 }
 
 
