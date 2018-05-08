@@ -6,6 +6,25 @@ from dateutil.parser import parse as dt_parse
 import pytz
 
 
+def apply_tuple(elt, instruction):
+    (selector, *rest) = instruction
+
+    result = elt
+    if isinstance(elt, list):
+        new_result = []
+        for member in elt:
+            add = apply_instruction(member, selector)
+            if isinstance(add, (list, map)):
+                new_result += add
+            else:
+                new_result.append(add)
+        result = new_result
+    elif elt:
+        result = apply_instruction(elt, selector)
+
+    return apply_tuple(result, rest) if rest else result
+
+
 def apply_instruction(elt, instruction):
     if callable(instruction):
         return instruction(elt)
@@ -22,22 +41,7 @@ def apply_instruction(elt, instruction):
         return dict_from_selectors(elt, instruction)
 
     if isinstance(instruction, tuple):
-        (selector, *fns) = instruction
-        result = apply_instruction(elt, selector)
-        if isinstance(result, list):
-            for fn in fns:
-                new_result = []
-                for elt in result:
-                    add = apply_instruction(elt, fn)
-                    if isinstance(add, (list, map)):
-                        new_result += add
-                    else:
-                        new_result.append(add)
-                result = new_result
-        elif result:
-            for fn in fns:
-                result = apply_instruction(result, fn)
-        return result
+        return apply_tuple(elt, instruction)
 
     if getattr(instruction, "search"):
         return instruction.search(elt)
