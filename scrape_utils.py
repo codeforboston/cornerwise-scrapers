@@ -1,7 +1,13 @@
+from datetime import datetime
+
 import bs4
+from dateutil.parser import parse as dt_parse
 
 
 def apply_instruction(elt, instruction):
+    if callable(instruction):
+        return instruction(elt)
+
     if isinstance(instruction, str):
         return elt.select_one(instruction)
 
@@ -16,10 +22,17 @@ def apply_instruction(elt, instruction):
         result = apply_instruction(elt, selector)
         if isinstance(result, list):
             for fn in fns:
-                result = map(fn, result)
+                new_result = []
+                for elt in result:
+                    add = apply_instruction(elt, fn)
+                    if isinstance(add, (list, map)):
+                        new_result += add
+                    else:
+                        new_result.append(add)
+                result = new_result
         else:
             for fn in fns:
-                result = fn(result)
+                result = apply_instruction(result, fn)
         return result
 
 
@@ -58,3 +71,15 @@ def attr(attrname):
     dict_from_selectors({"url": ("a", attr("href"))})
     """
     return lambda elt: elt.attrs[attrname]
+
+
+# def date(fmt=None, tz=None):
+#     def get_date(arg):
+#         if fmt:
+#             return datetime.strptime(fmt, arg)
+#         else:
+#             return dt_parse(arg)
+
+#     return get_date
+def date(arg):
+    return dt_parse(arg)
