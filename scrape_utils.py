@@ -1,7 +1,9 @@
 from datetime import datetime
+import re
 
 import bs4
 from dateutil.parser import parse as dt_parse
+import pytz
 
 
 def apply_instruction(elt, instruction):
@@ -12,7 +14,9 @@ def apply_instruction(elt, instruction):
         return elt.select_one(instruction)
 
     if isinstance(instruction, list):
-        return elt.select(instruction[0])
+        instruction, *filters = instruction
+        return [match for match in elt.select(instruction)
+                if all(apply_instruction(match, filt) for filt in filters)]
 
     if isinstance(instruction, dict):
         return dict_from_selectors(elt, instruction)
@@ -30,10 +34,13 @@ def apply_instruction(elt, instruction):
                     else:
                         new_result.append(add)
                 result = new_result
-        else:
+        elif result:
             for fn in fns:
                 result = apply_instruction(result, fn)
         return result
+
+    if getattr(instruction, "search"):
+        return instruction.search(elt)
 
 
 def dict_from_selectors(elt: bs4.element.Tag, selectors: dict):
@@ -65,21 +72,44 @@ def text_children(elt):
     return list(filter(None, pieces))
 
 
-def attr(attrname):
-    """Use to pull an attribute into a scraped dictionary:
+def attr(attrname, val=None):
+    """
+    With one argument, pulls an attributes into a scraped dictionary:
 
     dict_from_selectors({"url": ("a", attr("href"))})
+
+    With two arguments, returns an element filter that
     """
-    return lambda elt: elt.attrs[attrname]
+    if val:
+        if getattr(val, "match", None):
+            return lambda elt: val.match(elt.attrs.get("attrname", ""))
+        else:
+            return lambda elt: elt.attrs.get("attrname") == val
+
+    return lambda elt: elt.attrs.get(attrname, "")
 
 
-# def date(fmt=None, tz=None):
-#     def get_date(arg):
-#         if fmt:
-#             return datetime.strptime(fmt, arg)
-#         else:
-#             return dt_parse(arg)
+def date(arg=None, tz=None):
+    if tz and not arg:
+        return lambda x: date(x, tz)
 
-#     return get_date
-def date(arg):
+    if tz:
+        dt = dt_parse(arg, ignoretz=True)
+        return pytz.timezone(tz).localize(dt)
+
     return dt_parse(arg)
+
+
+def text_contains(arg):
+    return lambda elt: arg in elt.text
+
+
+def text_matches(patt):
+    if isinstance(patt, str):
+        patt = re.compile(patt)
+
+    return lambda elt: re.search(patt, elt.text)
+
+
+def either(*fns):
+    return lambda elt: any(fn(elt) for fn in fns)
