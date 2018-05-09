@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, tzinfo
 import pytz
 
 
-def preprocess(timezone):
+def preprocess(timezone, default_period=timedelta(days=30)):
     """Decorator that returns a function that takes a Request-like object with a
     'since' parameter of the form YYYYmmdd and calls the wrapped function with
     a datetime.
@@ -19,7 +19,7 @@ def preprocess(timezone):
                 since = timezone.localize(datetime.strptime(since, "%Y%m%d"))
             else:
                 now = pytz.utc.localize(datetime.utcnow()).astimezone(timezone)
-                since = now - timedelta(days=30)
+                since = now - default_period
 
             return view_fn(since)
 
