@@ -31,7 +31,13 @@
    - Types :: Cases
    - Source :: [[./somervillema.py][somervillema.py]]
    - Description :: Scrapes the OSPCD's [[https://www.somervillema.gov/departments/ospcd/planning-and-zoning/reports-and-decisions][Reports and Decisions]] page.
-
+** Somerville, MA PB/ZBA Event Scraper
+   - URL :: https://scraper.cornerwise.org/somervillema_events
+   - Types :: Events
+   - Source :: [[file:somervillema_events.py][somervillema_events.py]]
+   - Description :: Scrapes the city's [[https://www.somervillema.gov/event-documents][events]] page, finds events for the
+                    Planning Board and Zoning Board of Appeals, and scrapes the
+                    attached Agenda for related case numbers.
 ** Cambridge, MA
    - URL :: https://scraper.cornerwise.org/cambridgema
    - Types :: Cases
