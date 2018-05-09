@@ -178,11 +178,19 @@ def get_links(elt, base=URL_BASE):
     return [link_info(a, base) for a in elt.find_all("a") if a["href"]]
 
 
+def case_number(text):
+    if not isinstance(text, str):
+        text = td.get_text().strip()
+    m = re.match(r"([A-Z]+)\s*", text)
+    return f"{m.group(1)} {text[m.end():]}"
+
+
 def default_field(td):
     return td.get_text().strip()
 
 
 field_processors = {
+    "case_number": case_number,
     "reports": links_field,
     "decisions": links_field,
     "other": links_field,
@@ -242,12 +250,7 @@ def find_cases(doc):
                      "start": first_hearing,
                      "region_name": "Somerville, MA"})
 
-            # For now, we assume that if there are one or more documents
-            # linked in the 'decision' page, the proposal is 'complete'.
-            # Note that we don't have insight into whether the proposal was
-            # approved!
-            proposal["complete"] = bool(proposal["decisions"])
-            proposal["documents"] = []
+                proposal["documents"] = []
             for k in ["reports", "decisions", "other"]:
                 if proposal[k]:
                     for link in proposal[k].get("links", []):
@@ -310,14 +313,10 @@ def get_pages():
             break
 
 
-def process_case_dict(case):
-    return case
-
-
 def get_cases(gen=None):
     "Returns a generator that produces cases."
     for doc in (gen or get_pages()):
-        yield from map(process_case_dict, find_cases(doc))
+        yield from find_cases(doc)
 
 
 def get_proposals_since(dt=None,
