@@ -74,6 +74,10 @@ def text(elt):
     return elt.text
 
 
+def stripped_text(elt):
+    return elt.text.strip()
+
+
 def text_children(elt):
     pieces = (child.strip() for child in elt.children if isinstance(child, str))
     return list(filter(None, pieces))
@@ -100,6 +104,9 @@ def date(arg=None, tz=None):
     if tz and not arg:
         return lambda x: date(x, tz)
 
+    if isinstance(arg, bs4.Tag):
+        arg = stripped_text(arg)
+
     if tz:
         dt = dt_parse(arg, ignoretz=True)
         return pytz.timezone(tz).localize(dt)
@@ -123,3 +130,33 @@ children = bs4.Tag.children.fget
 
 def either(*fns):
     return lambda elt: any(fn(elt) for fn in fns)
+
+
+def to_under(s):
+    "Converts a whitespace-separated string to underscore-separated."
+    return re.sub(r"\s+", "_", s.lower())
+
+
+def col_names(table):
+    tr = table.select("thead > tr")[0]
+    return [th.get_text().strip() for th in tr.find_all("th")]
+
+
+def tabular(field_processors={}, convert_column=to_under, index=None):
+    def process_table(elt):
+        table = elt if elt.name == "table" else elt.find("table")
+        columns = [convert_column(c) for c in col_names(table)]
+        rows = table.find("tbody").find_all("tr")
+
+        data = ({col_name: apply_instruction(cell, field_processors.get(col_name, stripped_text))
+                 for col_name, cell in zip(columns, row.find_all("td"))}
+                for row in rows)
+        if index:
+            return {datum[index]: datum for datum in data}
+        else:
+            return list(data)
+
+    if isinstance(field_processors, bs4.Tag):
+        return process_table(field_processors)
+
+    return process_table
