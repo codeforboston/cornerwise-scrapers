@@ -34,6 +34,12 @@ def get_pdf(url):
     return PdfFileReader(pdf_in)
 
 
+def case_year(case):
+    m = re.match(r"[A-Z]+\s*(\d+)", case)
+    year = m and m.group(1)
+    return int(year) if year and year.isdigit() else 0
+
+
 def get_cases(pdf, case_pattern=PBCasePattern):
     """Extremely crude approach to scraping cases from an agenda PDF.
     """
@@ -98,12 +104,14 @@ def get_events(doc, url_base=URL, match=r"Planning Board|Zoning Board of Appeals
 
 def add_event_details(event):
     details = get_event_details(get_page(event["url"]))
+    year = event["start"].year
     event.update(details)
 
     for doc in event["documents"]:
         if "Agenda" in doc["title"]:
             pattern = PBCasePattern if "Planning Board" in event["title"] else ZBACasePattern
-            event["cases"] = list(get_cases(doc["url"], pattern))
+            event["cases"] = [cn for cn in get_cases(doc["url"], pattern)
+                              if year - case_year(cn) <= 4]  # hack!
             break
 
     event["region_name"] = "Somerville, MA"
