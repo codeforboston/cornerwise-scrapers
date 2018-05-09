@@ -61,10 +61,13 @@ def dict_from_selectors(elt: bs4.element.Tag, selectors: dict):
         if isinstance(applied, map):
             result[prop] = list(applied)
         elif isinstance(applied, bs4.Tag):
-            result[prop] = applied.text
+            result[prop] = applied.text.strip()
         else:
             result[prop] = applied
     return result
+
+
+scrape = apply_instruction
 
 
 def text(elt):
@@ -113,6 +116,9 @@ def text_matches(patt):
         patt = re.compile(patt)
 
     return lambda elt: re.search(patt, elt.text)
+
+
+children = bs4.Tag.children.fget
 
 
 def either(*fns):
