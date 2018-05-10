@@ -6,7 +6,8 @@ import re
 from urllib import parse
 
 from cloud import aws_lambda
-from scrape_utils import attr, scrape, date, text, text_children, text_contains
+from scrape_utils import (attr, ch, scrape,
+                          address, date, text, text_children, text_contains)
 from shared import preprocess
 
 import bs4
@@ -57,8 +58,10 @@ def get_page(url):
 
 
 def get_event_details(event):
+    address_defaults = {"city": "Somerville", "state": "MA", "zip": "02143"}
     details =  scrape(event, {
-        "location": (".calendar-content__event-location", lambda elt: "\n".join(text_children(elt))),
+        "location": (".calendar-content__event-location", ch(text_children, "\n".join,
+                                                             address(defaults=address_defaults))),
         "description": (".main-content .field-type-text-with-summary", ["p"], text),
         "departments": ([".field-name-field-event-department li"], text),
         "image": (".field-content a img", attr("src")),

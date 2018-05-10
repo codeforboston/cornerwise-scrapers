@@ -1,9 +1,12 @@
+from collections import defaultdict
 from datetime import datetime
+from functools import reduce
 import re
 
 import bs4
 from dateutil.parser import parse as dt_parse
 import pytz
+import usaddress
 
 
 def apply_tuple(elt, instruction):
@@ -132,6 +135,11 @@ def either(*fns):
     return lambda elt: any(fn(elt) for fn in fns)
 
 
+def ch(*fns):
+    "Chain together some functions."
+    return lambda elt: reduce((lambda x, fn: apply_instruction(x, fn)), fns, elt)
+
+
 def to_under(s):
     "Converts a whitespace-separated string to underscore-separated."
     return re.sub(r"\s+", "_", s.lower())
@@ -160,3 +168,27 @@ def tabular(field_processors={}, convert_column=to_under, index=None):
         return process_table(field_processors)
 
     return process_table
+
+
+def address(text=None, defaults={}):
+    if not text and defaults:
+        return lambda elt: address(elt, defaults)
+
+    if isinstance(text, bs4.Tag):
+        text = text.text
+
+    tagged, _ = usaddress.tag(text)
+    tagged = defaultdict(str, tagged)
+    street_address = "{AddressNumber} {StreetName} {StreetNamePostType}".format(**tagged)
+    occupancy = "{a[Recipient]}\n{a[OccupancyIdentifier]} {a[OccupancyType]}".format(a=tagged)
+    place = tagged["Place"]
+    if "\n" in place:
+        occupancy_name, place = place.rsplit("\n", 1)
+        occupancy += f" {occupancy_name}"
+    occupancy = re.sub(r"(^\s+|(?<=\s)\s+|\s+$)", "", occupancy)
+    return {
+        "name": occupancy,
+        "city": place or defaults["city"],
+        "state": tagged.get("Statename", defaults["state"]),
+        "zip": tagged.get("ZipCode", defaults["zip"])
+    }
