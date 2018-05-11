@@ -64,6 +64,7 @@ def get_event_details(event):
                                                              address(defaults=address_defaults))),
         "description": (".main-content .field-type-text-with-summary", ["p"], text),
         "departments": ([".field-name-field-event-department li"], text),
+        "contact": (".field-name-field-event-contact-name", [".field-items .field-item"], text),
         "image": (".field-content a img", attr("src")),
         "cost": ".calendar-content__price",
         "accessibility": ".calendar-content__accessibility-text"
