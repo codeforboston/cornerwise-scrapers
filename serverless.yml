@@ -12,6 +12,7 @@ provider:
 functions:
   somervillema:
     handler: somervillema.scrape
+    description: "Scrapes the OSPCD's Reports and Decisions page for recent applications submitted for review to Somerville's Planning Board and Zoning Board of Appeals."
     events:
       - http:
           path: somervillema
@@ -26,6 +27,8 @@ functions:
 
   somervillema_events:
     handler: somervillema_events.run
+    description: "Scrapes the Somerville events page for documents related to the Planning Board and ZBA."
+    timeout: 30
     events:
       - http:
           path: somervillema_events
