@@ -117,30 +117,6 @@ def get_data(doc, get_attribute=to_under, processors={}):
         yield i, tr, get_row_vals(attributes, tr, processors)
 
 
-# This is just hardcoded based on known information about the Somerville PB/ZBA
-# schedule. Once the city events page is fixed and can be filtered by
-# department, this can go away.
-HEARING_HOUR = 18
-HEARING_MIN = 0
-
-
-def event_title_for_case_number(case_number):
-    if case_number.startswith("PB"):
-        return "Planning Board"
-
-    if case_number.startswith("ZBA"):
-        return "Zoning Board of Appeals"
-
-
-DEFAULT_EVENT_DESCRIPTIONS = {
-    "Zoning Board of Appeals": ("The ZBA is the Special Permit Granting Authority for variances; appeals of decisions; Comprehensive Permit Petitions; and some Special Permit applications"),
-
-    "Planning Board": ("The Planning Board is the Special Permit Granting Authority for special districts and makes recommendations to the Board of Aldermen on zoning amendments.")
-}
-
-
-
-
 # Give the attributes a custom name:
 TITLES = {}
 
@@ -178,10 +154,15 @@ def get_links(elt, base=URL_BASE):
     return [link_info(a, base) for a in elt.find_all("a") if a["href"]]
 
 
-def case_number(text):
-    if not isinstance(text, str):
-        text = td.get_text().strip()
+def case_numbers(text, prefs=["PB", "ZBA"]):
+    prefs_group = "|".join(prefs)
+    return re.findall(rf"(?:{prefs_group})" r"\s*(?:\d{4}(?:-[A-Z]?\d+)+)", text)
+
+
+def format_case_number(text):
+    text = re.sub(r"--+", "-", text)
     m = re.match(r"([A-Z]+)\s*", text)
+
     return f"{m.group(1)} {text[m.end():]}"
 
 
@@ -190,7 +171,6 @@ def default_field(td):
 
 
 field_processors = {
-    "case_number": case_number,
     "reports": links_field,
     "decisions": links_field,
     "other": links_field,
@@ -236,21 +216,12 @@ def find_cases(doc):
             proposal["all_addresses"] = addresses
             proposal["source"] = URL_BASE
 
-            # Event:
-            events = []
-            event_title = event_title_for_case_number(proposal["case_number"])
-            event_description = DEFAULT_EVENT_DESCRIPTIONS.get(event_title)
-            first_hearing = proposal.get("first_hearing_date")
-            if first_hearing and event_title:
-                first_hearing = first_hearing.replace(hour=HEARING_HOUR,
-                                                      minute=HEARING_MIN)
-                events.append(
-                    {"title": event_title,
-                     "description": event_description,
-                     "start": first_hearing,
-                     "region_name": "Somerville, MA"})
+            all_cases = list(map(format_case_number, case_numbers(proposal["case_number"])))
+            proposal["case_number"] = all_cases[0]
+            if len(all_cases) > 1:
+                proposal["case_numbers"] = all_cases
 
-                proposal["documents"] = []
+            proposal["documents"] = []
             for k in ["reports", "decisions", "other"]:
                 if proposal[k]:
                     for link in proposal[k].get("links", []):
@@ -258,7 +229,6 @@ def find_cases(doc):
                         proposal["documents"].append(link)
                 del proposal[k]
 
-            proposal["events"] = events
             del proposal["number"]
             del proposal["street"]
 
