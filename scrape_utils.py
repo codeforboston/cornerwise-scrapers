@@ -74,7 +74,10 @@ scrape = apply_instruction
 
 
 def text(elt):
-    return elt.text
+    if isinstance(elt, bs4.Tag):
+        return elt.text
+    else:
+        return map(text, elt)
 
 
 def stripped_text(elt):
