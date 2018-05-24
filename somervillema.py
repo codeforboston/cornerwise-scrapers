@@ -1,11 +1,12 @@
 from datetime import datetime
 import logging
 import re
-import pytz
+import os
 from functools import partial
 from bs4 import BeautifulSoup
 from itertools import takewhile
 
+import pytz
 import requests
 
 from cloud import aws_lambda
@@ -29,7 +30,8 @@ def to_under(s):
 
 def link_info(a, base=URL_BASE):
     return {"title": a.get_text().strip(),
-            "url": urljoin(base, a["href"]).replace(" ", "%20")}
+            "url": urljoin(base, a["href"]).replace(" ", "%20"),
+            "content_type": a.get("type", "").split(";", 1)[0]}
 
 
 def get_datetime(datestring, tzinfo=None, pattern="%m/%d/%Y - %I:%M%p"):
@@ -225,6 +227,9 @@ def find_cases(doc):
             for k in ["reports", "decisions", "other"]:
                 if proposal[k]:
                     for link in proposal[k].get("links", []):
+                        _, ext = os.path.splitext(link["url"])
+                        if not ext:
+                            continue
                         link["tags"] = [k]
                         proposal["documents"].append(link)
                 del proposal[k]
