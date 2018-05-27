@@ -1,3 +1,7 @@
+"""A DSL to remove some of the tedium from writing BS4 scrapers.
+
+
+"""
 from collections import defaultdict
 from datetime import datetime
 from functools import reduce
@@ -29,6 +33,47 @@ def apply_tuple(elt, instruction):
 
 
 def apply_instruction(elt, instruction):
+    """A high level function that takes a bs4 Tag or document, followed by a
+    directive that specifies the content to extract and the shape it should
+    have.
+
+    - Strings are treated as CSS selectors.
+
+        For example, scrape(doc, "a.link") would select and return the first
+        <a> tag in `doc` with the "link" class
+
+    - Lists are used to indicate that multiple tags should be returned, rather
+    than just the first:
+
+        scrape(doc, ["a.link"]) -- return all <A> tags with "link" class
+
+    - Subsequent elements in the list act as filters
+
+        scrape(doc, ["a.link", "img"]) -- return a.link tags containing an
+        <img>
+
+        scrape(doc, ["a.link", text, str.strip]) -- return a.link tags with
+        non-empty string contents (text is a function that takes a tag)
+
+    - Tuples group operations on a tag or tags
+
+        scrape(doc, ("a.link", text)) -- return the text of the first a.link
+        tag
+
+        scrape(doc, (["a.link"], text) -- return the text of each a.link tag
+
+        scrape(doc, (["a.link", "img"], attr("href"))) -- return the href
+        attribute of each a.link tag that has an img descendant
+
+    - Dicts return dicts
+
+        scrape(doc, {"text": ("a.link", text)})
+
+        scrape(doc, (["a.link"], {"text": text})) - return a list of dicts, one
+        for each a.link tag, where the "text" key of each dict contains the
+        text of the corresponding tag.
+
+    """
     if callable(instruction):
         return instruction(elt)
 
@@ -108,6 +153,8 @@ def attr(attrname, val=None):
 
 def date(arg=None, tz=None):
     if tz and not arg:
+        if isinstance(tz, str):
+            tz = pytz.timezone(tz)
         return lambda x: date(x, tz)
 
     if isinstance(arg, bs4.Tag):
@@ -115,7 +162,7 @@ def date(arg=None, tz=None):
 
     if tz:
         dt = dt_parse(arg, ignoretz=True)
-        return pytz.timezone(tz).localize(dt)
+        return tz.localize(dt)
 
     return dt_parse(arg)
 

@@ -98,7 +98,7 @@ def get_events(doc, url_base=URL, match=r"Planning Board|Zoning Board of Appeals
                   ([".view-event-documents tbody tr", (".views-field-field-event-doc-event", text, match)],
                    {"title": (".views-field-field-event-doc-event", text, str.strip),
                     "url": (".views-field-field-event-doc-event a", attr("href"), make_absolute),
-                    "start": (".date-display-single", attr("content"), date),
+                    "start": (".date-display-single", attr("content"), date(tz=TIMEZONE)),
                     "documents": (["span.file a"], {"url": (attr("href"), make_absolute),
                                                     "file_title": (attr("href"), file_name),
                                                     "title": (text, remove_prefix)})
@@ -126,6 +126,13 @@ def get_page_events(url, page):
 
 
 def get_all_events():
+    """Generates event details by pulling in the city's Event Documents pages one
+    by one, scraping each for a list of events, then scraping the attached
+    agenda documents. This is meant to be consumed lazily and only as needed,
+    since it will keep working until the consumer stops requesting more events
+    or an Exception occurs.
+
+    """
     for url, page in get_pages():
         yield from get_page_events(url, page)
 
