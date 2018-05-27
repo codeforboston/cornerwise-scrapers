@@ -26,33 +26,21 @@ def find_text_elem(elem, regex, tags={"tr"}):
     return elem.find(finder)
 
 
-def time_match(time_range):
-    match = re.search(re.compile(r"(\d\d?):(\d\d)( am|pm)?\s+to\s+(\d\d?):(\d\d) (am|pm)", re.I), time_range)
-    start_hour = int(match.group(1))
-    start_minute = int(match.group(2))
-    start_offset = 12 if (match.group(3) or match.group(6)).lower() == "pm" else 0
-
-    end_hour = int(match.group(4))
-    end_minute = int(match.group(5))
-    end_offset = 12 if match.group(6).lower() == "pm" else 0
-
-    return (time(start_hour + start_offset, start_minute),
-            time(end_hour + end_offset, end_minute))
-
-
 time_range_pattern = re.compile(
-    r"(\d\d?)(?::(\d\d))?((?: to | *- *)(\d\d?)(?::(\d\d))?)?(?: *([ap]\.?m\.?))", re.I)
+    r"(\d\d?)(?::(\d\d))?(?:\s*([ap]\.?m\.?))?((?: to | *- *)(\d\d?)(?::(\d\d))?)?(?: *([ap]\.?m\.?))", re.I)
 
 def match_time_range(text):
     match = time_range_pattern.search(text)
     if match:
-        start_time = time(int(match.group(1)),
+        start_offset = 12 if (match.group(3) or match.group(7) or "").lower() == "pm" else 0
+        start_time = time(int(match.group(1)) % 12 + start_offset,
                           int(match.group(2) or "0"))
 
         end_time = None
         if match.group(3):
-            end_time = time(int(match.group(4)),
-                            int(match.group(5) or "0"))
+            end_offset = 12 if (match.group(7) or "").lower() == "pm" else 0
+            end_time = time(int(match.group(5)) % 12 + end_offset,
+                            int(match.group(6) or "0"))
 
         return start_time, end_time
 
