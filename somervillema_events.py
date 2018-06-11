@@ -109,10 +109,12 @@ def add_event_details(event):
     details = get_event_details(get_page(event["url"]))
     year = event["start"].year
     event.update(details)
+    dept = "pb" if "Planning Board" in event["title"] else "zba"
+    event["department_code"] = dept
 
     for doc in event["documents"]:
         if "Agenda" in doc["title"]:
-            pattern = PBCasePattern if "Planning Board" in event["title"] else ZBACasePattern
+            pattern = PBCasePattern if dept == "pb" else ZBACasePattern
             event["cases"] = [cn for cn in get_cases(doc["url"], pattern)
                               if year - case_year(cn) <= 4]  # hack!
             break

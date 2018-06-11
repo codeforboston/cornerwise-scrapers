@@ -119,6 +119,30 @@ def get_data(doc, get_attribute=to_under, processors={}):
         yield i, tr, get_row_vals(attributes, tr, processors)
 
 
+# This is just hardcoded based on known information about the Somerville PB/ZBA
+# schedule. Once the city events page is fixed and can be filtered by
+# department, this can go away.
+HEARING_HOUR = 18
+HEARING_MIN = 0
+
+
+def event_info_for_case_number(case_number):
+    if case_number.startswith("PB"):
+        return ("pb", "Planning Board")
+
+    if case_number.startswith("ZBA"):
+        return ("zba", "Zoning Board of Appeals")
+
+
+DEFAULT_EVENT_DESCRIPTIONS = {
+    "Zoning Board of Appeals": ("The ZBA is the Special Permit Granting Authority for variances; appeals of decisions; Comprehensive Permit Petitions; and some Special Permit applications"),
+
+    "Planning Board": ("The Planning Board is the Special Permit Granting Authority for special districts and makes recommendations to the Board of Aldermen on zoning amendments.")
+}
+
+
+
+
 # Give the attributes a custom name:
 TITLES = {}
 
@@ -218,6 +242,22 @@ def find_cases(doc):
             proposal["all_addresses"] = addresses
             proposal["source"] = URL_BASE
 
+            # Event:
+            events = []
+            (event_dept, event_title) = event_info_for_case_number(proposal["case_number"])
+            event_description = DEFAULT_EVENT_DESCRIPTIONS.get(event_title)
+            first_hearing = proposal.get("first_hearing_date")
+            if first_hearing and event_title:
+                first_hearing = first_hearing.replace(hour=HEARING_HOUR,
+                                                      minute=HEARING_MIN)
+                events.append(
+                    {"title": event_title,
+                     "department_code": event_dept,
+                     "description": event_description,
+                     "start": first_hearing,
+                     "region_name": "Somerville, MA"})
+
+                proposal["documents"] = []
             all_cases = list(map(format_case_number, case_numbers(proposal["case_number"])))
             proposal["case_number"] = all_cases[0]
             if len(all_cases) > 1:
@@ -234,6 +274,7 @@ def find_cases(doc):
                         proposal["documents"].append(link)
                 del proposal[k]
 
+            proposal["events"] = events
             del proposal["number"]
             del proposal["street"]
 
