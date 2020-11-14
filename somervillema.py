@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import re
 import os
@@ -130,8 +130,17 @@ def event_info_for_case_number(case_number):
     if case_number.startswith("PB"):
         return ("pb", "Planning Board")
 
-    if case_number.startswith("ZBA"):
-        return ("zba", "Zoning Board of Appeals")
+    # if re.match(r"(ZBA|CZC|MP)", case_number):
+    return ("zba", "Zoning Board of Appeals")
+
+    # Others?
+    # DRA - Development Review Application
+    # CZC - Certificate of Zoning Compliance
+    # MP - Master Plan?
+    # MPSP - Master Plan Special Permit
+    # AA - Administrative Appeal
+
+    # Conservation Commission?
 
 
 DEFAULT_EVENT_DESCRIPTIONS = {
@@ -180,14 +189,14 @@ def get_links(elt, base=URL_BASE):
     return [link_info(a, base) for a in elt.find_all("a") if a["href"]]
 
 
-def case_numbers(text, prefs=["PB", "ZBA"]):
+def case_numbers(text, prefs=["PB", "ZBA", "DRA", "CZC", "MPSP", "MP", "AA"]):
     prefs_group = "|".join(prefs)
-    return re.findall(rf"(?:{prefs_group})" r"\s*(?:\d{4}(?:-[A-Z]?\d+)+)", text)
+    return re.findall(rf"(?:{prefs_group})" r"[\s#]*(?:(?:\d{4}|\d\d)(?:[-.][A-Z]?\d+)+)", text)
 
 
 def format_case_number(text):
     text = re.sub(r"--+", "-", text)
-    m = re.match(r"([A-Z]+)\s*", text)
+    m = re.match(r"([A-Z]+)[\s#]*", text)
 
     return f"{m.group(1)} {text[m.end():]}"
 
@@ -271,6 +280,7 @@ def find_cases(doc):
                         if not ext:
                             continue
                         link["tags"] = [k]
+                        link["field"] = k
                         proposal["documents"].append(link)
                 del proposal[k]
 
@@ -352,6 +362,8 @@ def get_proposals_since(dt=None,
     :returns: A list of dicts representing scraped cases.
 
     """
+    if not dt:
+        dt = datetime.now() - timedelta(days=7)
     if not dt.tzinfo:
         dt = TIMEZONE.localize(dt)
 
