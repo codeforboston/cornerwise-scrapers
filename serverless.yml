@@ -1,13 +1,30 @@
 service: cornerwise-scrapers
 
+custom:
+  default_stage: dev
+  docs_bucket: cornerwise-docs-${opt:stage, self:custom.default_stage}
+  bucket_arn: arn:aws:s3:::${self:custom.docs_bucket}
+  pythonRequirements:
+    dockerizePip: true
+  
 provider:
   name: aws
   runtime: python3.6
-  timeout: 60
+  timeout: 120
   profile: cornerwise
   environment:
     SOCRATA_TOKEN: ${file(./credentials.json):socrata_app_token}
     SOCRATA_SECRET: ${file(./credentials.json):socrata_app_secret}
+    DOCS_BUCKET: ${self:custom.docs_bucket}
+  usagePlan:
+    quota:
+      limit: 1000
+      period: MONTH
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource: ${self:custom.bucket_arn}/*
 
 functions:
   somervillema:
@@ -28,7 +45,6 @@ functions:
   somervillema_events:
     handler: somervillema_events.run
     description: "Scrapes the Somerville events page for documents related to the Planning Board and ZBA."
-    timeout: 30
     events:
       - http:
           path: somervillema_events
@@ -47,9 +63,24 @@ functions:
       - http:
           path: greenline
           method: get
+  extract_text:
+    handler: docs.extract_text
+    layers:
+      - {Ref: PdftoolsLambdaLayer}
+    events:
+      - s3:
+          bucket: ${self:custom.docs_bucket}
+          event: s3:ObjectCreated:*
+          rules:
+            - suffix: .pdf
+  download_docs:
+    handler: docs.download
+    events:
+      - schedule: cron(0 0 * * ? *)
   
 plugins:
   - serverless-python-requirements
-custom:
-  pythonRequirements:
-    dockerizePip: true
+layers:
+  pdftools:
+    package:
+      artifact: pdftools.zip

@@ -24,6 +24,7 @@ remap_attributes = {
 
 SOCRATA_TOKEN = os.environ["SOCRATA_TOKEN"]
 TIMEZONE = pytz.timezone("US/Eastern")
+REGION_NAME = "Cambridge, MA"
 
 def under_to_title(s):
     return " ".join(word.capitalize() for word in re.split(r"_+", s))

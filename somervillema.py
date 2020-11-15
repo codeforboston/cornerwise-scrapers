@@ -22,6 +22,7 @@ URL_HOST = "https://www.somervillema.gov"
 URL_BASE = (f"{URL_HOST}/departments/ospcd/"
             "planning-and-zoning/reports-and-decisions/robots")
 URL_FORMAT = URL_BASE + "?page={:1}"
+REGION_NAME = "Somerville, MA"
 
 def to_under(s):
     "Converts a whitespace-separated string to underscore-separated."
